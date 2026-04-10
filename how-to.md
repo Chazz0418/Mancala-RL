@@ -21,10 +21,13 @@ Welcome to the Mancala Reinforcement Learning project. This guide provides a com
     ```bash
     git submodule update --init --recursive
     ```
+    > 💡 **Pro-Tip**: If the `mancala_ai` folder is still empty after running this, your Git may be in a detached HEAD state. Try running `git submodule update --remote` to force a refresh.
 3.  **Install Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
+
+> 💡 **Pro-Tip**: Training 500,000 steps typically takes 30–60 minutes on a modern 4-core CPU. While RL can run on a GPU, this specific project is optimized for CPU training to ensure accessibility.
 
 ---
 
@@ -156,6 +159,8 @@ python main.py --mode train --steps 200000 --resume ./models/phase_1_final.zip
 ```bash
 tensorboard --logdir ./logs/
 ```
+
+> 💡 **Pro-Tip**: In TensorBoard, look for the `rollout/ep_rew_mean` graph. When the line levels off (plateaus) and stops rising for more than 100,000 steps, your agent has likely "converged." This means it has learned as much as it can with the current settings.
 
 **Run a 100-game Headless Tournament (AI vs Minimax):**
 ```bash
