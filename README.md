@@ -17,8 +17,8 @@ A Reinforcement Learning environment and GUI for playing and training agents in 
 
 ### 1. Installation
 ```bash
-git clone <your-repository-url>
-cd Mancala
+git clone https://github.com/Chazz0418/Mancala-RL.git
+cd Mancala-RL
 git submodule update --init --recursive
 pip install -r requirements.txt
 ```
