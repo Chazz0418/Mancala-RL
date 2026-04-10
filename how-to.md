@@ -13,8 +13,8 @@ Welcome to the Mancala Reinforcement Learning project. This guide provides a com
 ### Installation
 1.  **Clone the Repository**:
     ```bash
-    git clone <repository-url>
-    cd Mancala
+    git clone https://github.com/Chazz0418/Mancala-RL.git
+    cd Mancala-RL
     ```
 2.  **Initialize the Game Engine (Submodule)**:
     The core game logic lives in a separate repository linked as a submodule. You **must** run this command to fetch the engine code:
