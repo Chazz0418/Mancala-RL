@@ -1,0 +1,86 @@
+import os
+import sys
+import argparse
+
+# Add mancala-ai submodule to path before other imports
+submodule_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "mancala_ai"))
+if submodule_path not in sys.path:
+    sys.path.insert(0, submodule_path)
+
+import pygame
+from src.gui.menu import Menu
+from src.gui.game_screen import GameScreen
+from src.training.train import train
+from src.tournament import run_tournament
+from mancala_ai.agents.random_agent import RandomAgent
+from mancala_ai.agents.minimax_agent import MinimaxAgent
+from src.agents.rl_agent import RLAgent
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", type=str, default="gui", choices=["gui", "train", "tournament"])
+    parser.add_argument("--steps", type=int, default=100000)
+    parser.add_argument("--games", type=int, default=100)
+    parser.add_argument("--model", type=str, default="./models/best_model/best_model.zip")
+    args = parser.parse_args()
+
+    if args.mode == "train":
+        train(total_timesteps=args.steps)
+    elif args.mode == "tournament":
+        # Load agent if exists
+        if os.path.exists(args.model):
+            agent_rl = RLAgent("RL_Agent", args.model)
+        else:
+            print(f"Warning: model {args.model} not found. Using RandomAgent instead.")
+            agent_rl = RandomAgent("Random_RL")
+            
+        agent_minimax = MinimaxAgent("Minimax")
+        agent_minimax.set_setting("depth", 3)
+        run_tournament(agent_rl, agent_minimax, args.games)
+    else: # gui
+        pygame.init()
+        surface = pygame.display.set_mode((800, 400))
+        pygame.display.set_caption("Mancala RL")
+        
+        menu = Menu(surface)
+        running = True
+        while running:
+            menu.draw()
+            pygame.display.flip()
+            
+            mode_selected = None
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    mode_selected = menu.handle_click(event.pos)
+            
+            if mode_selected:
+                if mode_selected == "play":
+                    # Human vs RL
+                    if os.path.exists(args.model):
+                        agent = RLAgent("RL", args.model)
+                    else:
+                        agent = RandomAgent("Random")
+                    game = GameScreen(surface, None, agent) # Player 0 is human
+                    game.run()
+                elif mode_selected == "watch":
+                    # RL vs Minimax
+                    if os.path.exists(args.model):
+                        agent_0 = RLAgent("RL", args.model)
+                    else:
+                        agent_0 = RandomAgent("Random")
+                    agent_1 = MinimaxAgent("Minimax")
+                    agent_1.set_setting("depth", 3)
+                    game = GameScreen(surface, agent_0, agent_1, mode="watch")
+                    game.run()
+                elif mode_selected == "tournament":
+                    # Headless tournament but triggered from GUI?
+                    # For now just print a message and run it
+                    print("Running tournament in console...")
+                    # ...
+                    
+        pygame.quit()
+
+if __name__ == "__main__":
+    main()

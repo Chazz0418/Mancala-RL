@@ -1,0 +1,3 @@
+[submodule "mancala_ai"]
+	path = mancala_ai
+	url = https://github.com/CaganKiper/mancala-ai.git
