@@ -7,7 +7,14 @@ class GameScreen:
         self.surface = surface
         self.agent_0 = agent_0 # None if human
         self.agent_1 = agent_1 # None if human
-        print(f"GameScreen init: P0 agent: {type(self.agent_0).__name__ if self.agent_0 else 'Human'}, P1 agent: {type(self.agent_1).__name__ if self.agent_1 else 'Human'}")
+        
+        # Determine player names
+        self.player_names = [
+            self.agent_0.name if self.agent_0 else "Human",
+            self.agent_1.name if self.agent_1 else "Human"
+        ]
+        
+        print(f"GameScreen init: P0: {self.player_names[0]}, P1: {self.player_names[1]}")
         self.mode = mode
         self.kalah = KalahEnvironment()
         self.clock = pygame.time.Clock()
@@ -77,7 +84,7 @@ class GameScreen:
 
     def _draw(self):
         valid_moves = self.kalah.get_valid_actions()
-        draw_board(self.surface, self.kalah.board, self.kalah.current_player, valid_moves)
+        draw_board(self.surface, self.kalah.board, self.kalah.current_player, valid_moves, player_names=self.player_names)
         
         if self.kalah.done:
             font = pygame.font.SysFont(None, 72)
@@ -85,7 +92,7 @@ class GameScreen:
             if winner is None:
                 text = "It's a Draw!"
             else:
-                text = f"Player {winner} Wins!"
+                text = f"{self.player_names[winner]} Wins!"
             winner_text = font.render(text, True, (255, 0, 0))
             text_rect = winner_text.get_rect(center=(400, 200))
             self.surface.blit(winner_text, text_rect)

@@ -14,7 +14,10 @@ PIT_RADIUS = 40
 STORE_WIDTH = 60
 STORE_HEIGHT = 150
 
-def draw_board(surface, board, current_player, valid_moves):
+def draw_board(surface, board, current_player, valid_moves, player_names=None):
+    if player_names is None:
+        player_names = ["Player 0", "Player 1"]
+        
     surface.fill((30, 30, 30))
     
     # Draw Board Background
@@ -41,10 +44,7 @@ def draw_board(surface, board, current_player, valid_moves):
 
     # P1 Pits (top row, mirrored)
     for i in range(6):
-        # Index 7 corresponds to pit 0 for P1, which is top-right?
-        # Let's say index 7-12 are right-to-left on top row.
-        # Or let's just do it simple: 12-7 left-to-right.
-        center_x = 150 + (5 - i) * 100 # i=0 -> 650, i=5 -> 150
+        center_x = 150 + (5 - i) * 100
         center_y = 120
         board_idx = 7 + i
         color = HIGHLIGHT_COLOR if current_player == 1 and i in valid_moves else PIT_COLOR
@@ -65,6 +65,10 @@ def draw_board(surface, board, current_player, valid_moves):
     text = font.render(str(board[6]), True, TEXT_COLOR)
     text_rect = text.get_rect(center=p0_store_rect.center)
     surface.blit(text, text_rect)
+    
+    # P0 Name Label
+    p0_name = font.render(player_names[0], True, TEXT_COLOR)
+    surface.blit(p0_name, (680, 300))
 
     # P1 Store (left)
     p1_store_rect = pygame.Rect(60, 125, STORE_WIDTH, STORE_HEIGHT)
@@ -72,9 +76,13 @@ def draw_board(surface, board, current_player, valid_moves):
     text = font.render(str(board[13]), True, TEXT_COLOR)
     text_rect = text.get_rect(center=p1_store_rect.center)
     surface.blit(text, text_rect)
+    
+    # P1 Name Label
+    p1_name = font.render(player_names[1], True, TEXT_COLOR)
+    surface.blit(p1_name, (60, 100))
 
     # Turn info
-    turn_text = font.render(f"Current Player: {'Player 0' if current_player == 0 else 'Player 1'}", True, TEXT_COLOR)
+    turn_text = font.render(f"Turn: {player_names[current_player]}", True, TEXT_COLOR)
     surface.blit(turn_text, (300, 20))
 
 def get_pit_at_pos(pos):

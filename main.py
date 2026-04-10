@@ -29,12 +29,13 @@ def main():
     elif args.mode == "tournament":
         # Load agent if exists
         if os.path.exists(args.model):
-            agent_rl = RLAgent("RL_Agent", args.model)
+            model_name = os.path.basename(args.model).replace(".zip", "")
+            agent_rl = RLAgent(f"AI_{model_name}", args.model)
         else:
             print(f"Warning: model {args.model} not found. Using RandomAgent instead.")
-            agent_rl = RandomAgent("Random_RL")
+            agent_rl = RandomAgent("AI_Random")
             
-        agent_minimax = MinimaxAgent("Minimax")
+        agent_minimax = MinimaxAgent("AI_Minimax")
         agent_minimax.set_setting("depth", 3)
         run_tournament(agent_rl, agent_minimax, args.games)
     else: # gui
@@ -59,18 +60,20 @@ def main():
                 if mode_selected == "play":
                     # Human vs RL
                     if os.path.exists(args.model):
-                        agent = RLAgent("RL", args.model)
+                        model_name = os.path.basename(args.model).replace(".zip", "")
+                        agent = RLAgent(f"AI_{model_name}", args.model)
                     else:
-                        agent = RandomAgent("Random")
+                        agent = RandomAgent("AI_Random")
                     game = GameScreen(surface, None, agent) # Player 0 is human
                     game.run()
                 elif mode_selected == "watch":
                     # RL vs Minimax
                     if os.path.exists(args.model):
-                        agent_0 = RLAgent("RL", args.model)
+                        model_name = os.path.basename(args.model).replace(".zip", "")
+                        agent_0 = RLAgent(f"AI_{model_name}", args.model)
                     else:
-                        agent_0 = RandomAgent("Random")
-                    agent_1 = MinimaxAgent("Minimax")
+                        agent_0 = RandomAgent("AI_Random")
+                    agent_1 = MinimaxAgent("AI_Minimax")
                     agent_1.set_setting("depth", 3)
                     game = GameScreen(surface, agent_0, agent_1, mode="watch")
                     game.run()
