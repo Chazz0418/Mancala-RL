@@ -83,6 +83,14 @@ We use **Proximal Policy Optimization (PPO)**, which is an industry-standard act
 By default, the AI is "sparse-reward" driven (+1 for a win, -1 for a loss). However, the environment supports **Incremental Rewards**:
 - If enabled, the AI receives a tiny reward every turn based on the difference in store scores. This "dense reward" helps the AI understand that "more stones in store = good" much earlier in the training process.
 
+### The Minimax Benchmark (Classical AI)
+Throughout this project, you will see references to **Minimax**. This is a classical, non-ML algorithm used to benchmark our RL agent.
+- **How it works**: Minimax "searches" the game tree by simulating every possible move and counter-move to find the mathematically optimal play.
+- **What is "Depth"?**: This refers to how many moves ahead the algorithm looks. 
+    - **Depth 1**: Only looks at the immediate next move.
+    - **Depth 3**: Looks at its move, the opponent's response, and its counter-response.
+- **RL vs. Minimax**: While Minimax is "perfect" for the depth it can see, it is computationally expensive. Our RL agent aims to play just as well (or better) but much faster, using "intuition" learned through millions of games.
+
 ---
 
 ## 📂 4. Directory Map & File Structure
