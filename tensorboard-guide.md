@@ -48,10 +48,14 @@ There are dozens of graphs, but you only need to watch a few to know if your age
 *   **What to look for**: It should start high and eventually drop and **STABILIZE**.
 *   **Context**: It will never reach zero. If it suddenly spikes massively late in training, it might indicate "catastrophic forgetting" (the AI suddenly got confused).
 
-### 4. `train/entropy_loss` (The "Creativity" Meter)
+### 4. `train/entropy_loss` (The "Decisiveness" Meter)
 *   **What it is**: A measure of how random the AI's choices are.
-*   **What to look for**: It should start high and slowly slope **DOWNWARDS**.
-*   **Context**: Early in training, the AI explores randomly (high entropy). As it figures out what works, it becomes more certain of its moves and stops guessing (low entropy). If it drops to zero too fast, the AI stopped exploring too early.
+*   **What to look for**: The line should move **UP** (from a low negative number like -1.0 toward 0.0).
+*   **Context**: 
+    - This graph shows **Negative Entropy**. 
+    - A low value (e.g., **-1.0**) means the AI is being "creative" and exploring many options. 
+    - A high value (e.g., **-0.2**) means the AI is becoming very certain and decisive. 
+    - **Self-Play Pattern**: You will see this "reset" (drop down) at the start of every new generation as the AI explores how to beat its new opponent, then climb back up as it masters the new strategy.
 
 ### 5. `train/explained_variance` (The "Understanding" Meter)
 *   **What it is**: How well the AI understands the "value" of the current board state.
