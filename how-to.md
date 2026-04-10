@@ -9,7 +9,16 @@ This guide will walk you through the process of training a Reinforcement Learnin
 Before training, ensure you have all dependencies installed. It is recommended to use a virtual environment.
 
 ```bash
-# Install required libraries
+# 1. Clone the repository (if using Git)
+git clone <repository-url>
+cd Mancala
+
+# 2. Initialize the game engine submodule (CRITICAL)
+# If you downloaded a ZIP, ensure the 'mancala_ai' folder is not empty.
+# If using Git, run:
+git submodule update --init --recursive
+
+# 3. Install required libraries
 pip install -r requirements.txt
 ```
 
@@ -92,3 +101,30 @@ This will run 100 games in the console and give you a final win/loss percentage.
 - **Patience**: A good agent usually needs at least **300,000 to 500,000 steps** to become very strong.
 - **CPU vs GPU**: This training runs on the CPU by default. It is lightweight enough that you can still use your computer for other tasks while it runs.
 - **Incremental Training**: If you want to continue training from a specific file, you can modify the `resume_from` logic in `src/training/train.py`.
+
+---
+
+## 🧪 Advanced: Creating a Unique Agent
+
+If you and a friend use the default settings, your agents will play very similarly. To create an AI with a unique "personality" or strategy, try experimenting with these files:
+
+### 1. Change the "Personality" (Reward Function)
+Open `src/env_wrapper.py` and find the `step()` method. You can change what the AI "cares" about:
+- **Aggressive**: Give it a small reward `+0.1` every time it performs a **capture**.
+- **Efficiency**: Give it a small penalty `-0.01` for every turn it takes to encourage faster wins.
+- **Greedy**: Increase the `incremental_reward` for every stone added to its store.
+
+### 2. Change the "Brain" (Neural Network)
+Open `src/training/train.py` and look for `policy_kwargs`.
+- **Deeper Brain**: Change `[128, 128]` to `[256, 256, 256]` for a more complex "thinking" process (requires more training time).
+- **Simple Brain**: Change to `[64, 64]` for a faster, more reactive agent.
+
+### 3. Change the "Schooling" (Curriculum)
+In `src/training/train.py`, you can alter the phases:
+- **Hard Mode**: Skip the Random phase and go straight to Minimax.
+- **Pure Self-Play**: Train exclusively against the `RLAgent` for all 500k steps. This often results in "unorthodox" strategies that can surprise human players.
+
+### 4. Hyperparameters
+In the `MaskablePPO` initialization in `src/training/train.py`:
+- **`learning_rate`**: Default is `3e-4`. Try `1e-4` for more stable, careful learning.
+- **`gamma`**: Default is `0.99`. Lowering this (e.g., `0.90`) makes the AI care more about immediate points than long-term victory.
