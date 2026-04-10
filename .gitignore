@@ -155,5 +155,6 @@ cython_debug/
 models/
 logs/
 archive/
+GEMINI.md
 test_env_manual.py
 test_mancala_rules.py
