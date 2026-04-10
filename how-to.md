@@ -58,9 +58,30 @@ Train multiple different models—one against `RandomAgent`, one against `Minima
 
 ## ⚙️ 3. Technical Background
 
-- **Action Masking**: In Mancala, you cannot pick stones from an empty pit. Action masking prevents the AI from even considering invalid moves. This significantly speeds up training by focusing the "brain" only on legal plays.
-- **Perspective Normalization**: The environment always presents the board from the agent's perspective. No matter if the AI is Player 0 or Player 1, it always sees its own pits at indices 0–5 and its store at index 6. 
-- **Reward Shaping**: The AI learns by receiving "points" (rewards). We use a mix of sparse rewards (winning/losing) and optional dense rewards (stone counts) to guide learning.
+To get the most out of training, it's helpful to understand the underlying mechanics of how the agent interacts with the Mancala environment.
+
+### The Observation Space (What the AI "Sees")
+The AI perceives the game board as a 1D array of 14 integers:
+- **Indices 0–5**: The AI's own pits (left to right).
+- **Index 6**: The AI's own store (Mancala).
+- **Indices 7–12**: The opponent's pits (relative to the AI).
+- **Index 13**: The opponent's store.
+*Note: Thanks to **Perspective Normalization**, the AI always views itself as "Player 0," regardless of whether it actually moved first or second in the engine.*
+
+### The Action Space (What the AI "Does")
+The AI has a **Discrete(6)** action space. It simply chooses a number from 0 to 5, representing which of its 6 pits it wants to pick stones from.
+
+### Action Masking (Why it's faster)
+In standard RL, if an agent chooses an invalid move (like an empty pit), it usually receives a penalty and the turn is wasted. This is slow and inefficient.
+- **How it works**: We use `sb3-contrib`'s **MaskablePPO**. This algorithm "masks out" the probability of choosing invalid pits before the AI even makes a decision.
+- **Benefit**: The AI never makes a "mistake" regarding the rules, allowing it to focus 100% of its energy on strategy rather than rule-following.
+
+### Maskable PPO Algorithm
+We use **Proximal Policy Optimization (PPO)**, which is an industry-standard actor-critic algorithm. It is known for being stable, reliable, and relatively easy to tune. The "Maskable" variant is a specialized version that natively supports the action masking described above.
+
+### Reward Shaping (Motivation)
+By default, the AI is "sparse-reward" driven (+1 for a win, -1 for a loss). However, the environment supports **Incremental Rewards**:
+- If enabled, the AI receives a tiny reward every turn based on the difference in store scores. This "dense reward" helps the AI understand that "more stones in store = good" much earlier in the training process.
 
 ---
 
