@@ -28,29 +28,46 @@ Welcome to the Mancala Reinforcement Learning project. This guide provides a com
 
 ---
 
-## 🧠 2. How Training Works
+## 🧠 2. Training Methodologies
 
-This project uses **Reinforcement Learning (RL)**, specifically the **Proximal Policy Optimization (PPO)** algorithm from the `stable-baselines3` library.
+Training an RL agent is as much an art as it is a science. While this project includes a default "Curriculum" script, there are several viable ways to train a Mancala AI. Each method will produce an agent with a different "playstyle."
 
-### Key Concepts
-- **Action Masking**: In Mancala, you cannot pick from an empty pit. Action masking prevents the AI from even considering invalid moves, which significantly speeds up training.
-- **Perspective Normalization**: To the AI, it is always "Player 0." The environment automatically flips the board so that the AI's pits are always at indices 0–5 and its store is at 6.
-- **Curriculum Learning**: Instead of facing a grandmaster immediately, the AI follows a 3-phase training schedule to gradually increase difficulty.
+### Method A: The 3-Phase Curriculum (Balanced)
+This is the default approach in `src/training/train.py`. It is designed to minimize "stalling" (where the AI learns nothing because it loses too fast).
+1.  **Phase 1 (Random)**: Learns basic mechanics and scoring.
+2.  **Phase 2 (Self-Play)**: Refines tactics by playing against its own previous version.
+3.  **Phase 3 (Minimax)**: Polishes the strategy by playing against a planning algorithm.
+- **Best for**: A reliable, all-around strong agent.
 
-### The 3-Phase Curriculum
-1.  **Phase 1: Foundation (vs Random)**
-    - **Goal**: Learn the rules and basic scoring.
-    - **Opponent**: `RandomAgent`.
-2.  **Phase 2: Strategy (Self-Play)**
-    - **Goal**: Discover advanced tactics and counter-plays.
-    - **Opponent**: The model's own "Phase 1" version.
-3.  **Phase 3: Optimization (vs Minimax)**
-    - **Goal**: Learn to beat planning algorithms.
-    - **Opponent**: `MinimaxAgent` (Depth 2).
+### Method B: Pure Self-Play (Emergent Strategy)
+In this method, you skip the Random and Minimax opponents and have the AI play exclusively against itself from step 1.
+- **Why?**: This is how world-class AIs like AlphaZero were trained. It prevents the AI from inheriting "human" biases or flaws from other agents.
+- **Result**: Can discover "weird" or unorthodox moves that surprise human players.
+- **How-to**: Modify `train.py` to use `RLAgent` as the opponent for all 500k steps.
+
+### Method C: The "Elite" Direct Challenge
+Skip the easy phases and train exclusively against a high-depth `MinimaxAgent` (Depth 3+).
+- **Why?**: Forces the AI to play "perfectly" from the start. 
+- **Risk**: Training may take much longer to "take off" because the AI will lose almost every game for the first 100k steps.
+- **Result**: An extremely defensive and cautious agent that prioritizes preventing opponent captures.
+
+### Method D: Targeted Ensemble Training
+Train multiple different models—one against `RandomAgent`, one against `Minimax`, and one against `Self`. Then, use the best-performing parts of each.
+- **How-to**: Run separate training sessions with different `--model` save paths and compare their win rates in Tournament mode.
 
 ---
 
-## 📂 3. Directory Map & File Structure
+## ⚙️ 3. Technical Background
+
+To get the most out of training, it's helpful to understand how the agent "sees" the game.
+
+- **Action Masking**: In Mancala, you cannot pick stones from an empty pit. Action masking prevents the AI from even considering invalid moves. This significantly speeds up training by focusing the "brain" only on legal plays.
+- **Perspective Normalization**: To simplify learning, the environment always presents the board from the agent's perspective. No matter if the AI is Player 0 or Player 1, it always sees its own pits at indices 0–5 and its store at index 6. 
+- **Reward Shaping**: The AI learns by receiving "points" (rewards). While winning is the ultimate goal, we can give smaller rewards for things like "capturing stones" to guide the AI toward good behavior earlier in training.
+
+---
+
+## 📂 4. Directory Map & File Structure
 
 ### Agents & Models
 - **`models/best_model/best_model.zip`**: The "gold standard" agent. This is the model that achieved the highest win rate during evaluation. The GUI loads this by default.
