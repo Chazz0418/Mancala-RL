@@ -98,10 +98,11 @@ class Menu:
         self.surface.blit(back_text, (370, 360))
 
     def _get_available_models(self):
-        if not os.path.exists("./models"):
-            return []
+        models = ["Minimax"] # Virtual model option
         
-        models = []
+        if not os.path.exists("./models"):
+            return models
+        
         for root, dirs, files in os.walk("./models"):
             for file in files:
                 if file.endswith(".zip") and file != "temp_migrate.zip":
@@ -109,8 +110,8 @@ class Menu:
                     rel_path = os.path.relpath(full_path, "./models")
                     models.append(rel_path)
         
-        # Sort so backups are clear but newest models are first
-        return sorted(models, key=lambda x: (not x.startswith("backups"), x), reverse=True)
+        # Sort so Minimax is at top, then backups, then newest models
+        return sorted(models, key=lambda x: (x != "Minimax", not x.startswith("backups"), x), reverse=True)
 
     def handle_click(self, pos):
         if self.state == "main":

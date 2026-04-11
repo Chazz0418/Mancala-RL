@@ -10,7 +10,7 @@ if submodule_path not in sys.path:
 import pygame
 from src.gui.menu import Menu
 from src.gui.game_screen import GameScreen
-from src.training.train import train
+from src.training.train import train_grandmaster_2
 from src.tournament import run_tournament
 from mancala_ai.agents.random_agent import RandomAgent
 from mancala_ai.agents.minimax_agent import MinimaxAgent
@@ -19,13 +19,13 @@ from src.agents.rl_agent import RLAgent
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="gui", choices=["gui", "train", "tournament"])
-    parser.add_argument("--steps", type=int, default=100000)
+    parser.add_argument("--steps", type=int, default=10000000)
     parser.add_argument("--games", type=int, default=100)
     parser.add_argument("--model", type=str, default="./models/best_model/best_model.zip")
     args = parser.parse_args()
 
     if args.mode == "train":
-        train(total_timesteps=args.steps)
+        train_grandmaster_2(total_steps=args.steps)
     elif args.mode == "tournament":
         # Load agent if exists
         if os.path.exists(args.model):
@@ -61,8 +61,10 @@ def main():
                 model_to_load = menu.selected_model or args.model
                 
                 if mode_selected == "play":
-                    # Human vs RL
-                    if os.path.exists(model_to_load):
+                    # Human vs RL or Minimax
+                    if model_to_load.endswith("Minimax"):
+                        agent = MinimaxAgent("AI_Minimax", depth=menu.minimax_depth, time_limit=600.0)
+                    elif os.path.exists(model_to_load):
                         model_name = os.path.basename(model_to_load).replace(".zip", "")
                         agent = RLAgent(f"AI_{model_name}", model_to_load)
                     else:
@@ -80,6 +82,7 @@ def main():
                         agent_0 = RandomAgent("AI_Random")
                     agent_1 = MinimaxAgent("AI_Minimax")
                     agent_1.set_setting("depth", menu.minimax_depth)
+                    agent_1.set_setting("time_limit", 600.0) # 10 minute limit to allow high depths
                     game = GameScreen(surface, agent_0, agent_1, mode="watch")
                     game.run()
                 elif mode_selected == "tournament":
