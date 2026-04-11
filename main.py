@@ -57,21 +57,26 @@ def main():
                     mode_selected = menu.handle_click(event.pos)
             
             if mode_selected:
+                # Determine which model to use: selected in menu OR from command line OR default best
+                model_to_load = menu.selected_model or args.model
+                
                 if mode_selected == "play":
                     # Human vs RL
-                    if os.path.exists(args.model):
-                        model_name = os.path.basename(args.model).replace(".zip", "")
-                        agent = RLAgent(f"AI_{model_name}", args.model)
+                    if os.path.exists(model_to_load):
+                        model_name = os.path.basename(model_to_load).replace(".zip", "")
+                        agent = RLAgent(f"AI_{model_name}", model_to_load)
                     else:
+                        print(f"Warning: model {model_to_load} not found. Using Random.")
                         agent = RandomAgent("AI_Random")
                     game = GameScreen(surface, None, agent) # Player 0 is human
                     game.run()
                 elif mode_selected == "watch":
                     # RL vs Minimax
-                    if os.path.exists(args.model):
-                        model_name = os.path.basename(args.model).replace(".zip", "")
-                        agent_0 = RLAgent(f"AI_{model_name}", args.model)
+                    if os.path.exists(model_to_load):
+                        model_name = os.path.basename(model_to_load).replace(".zip", "")
+                        agent_0 = RLAgent(f"AI_{model_name}", model_to_load)
                     else:
+                        print(f"Warning: model {model_to_load} not found. Using Random.")
                         agent_0 = RandomAgent("AI_Random")
                     agent_1 = MinimaxAgent("AI_Minimax")
                     agent_1.set_setting("depth", 3)
