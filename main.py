@@ -79,7 +79,7 @@ def main():
                         print(f"Warning: model {model_to_load} not found. Using Random.")
                         agent_0 = RandomAgent("AI_Random")
                     agent_1 = MinimaxAgent("AI_Minimax")
-                    agent_1.set_setting("depth", 3)
+                    agent_1.set_setting("depth", menu.minimax_depth)
                     game = GameScreen(surface, agent_0, agent_1, mode="watch")
                     game.run()
                 elif mode_selected == "tournament":
