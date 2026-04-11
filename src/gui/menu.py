@@ -45,7 +45,10 @@ class Menu:
         depth_label = self.small_font.render(f"Minimax Depth: {self.minimax_depth}", True, (200, 200, 200))
         self.surface.blit(depth_label, (560, 150))
 
-        if self.minimax_depth > 8:
+        if self.minimax_depth >= 10:
+            warning_label = self.small_font.render("V. Slow!", True, (255, 100, 100))
+            self.surface.blit(warning_label, (680, 150))
+        elif self.minimax_depth > 8:
             warning_label = self.small_font.render("Slow!", True, (255, 100, 100))
             self.surface.blit(warning_label, (680, 150))
 
@@ -93,7 +96,7 @@ class Menu:
                 self.minimax_depth = max(1, self.minimax_depth - 1)
                 return None
             if self.depth_plus_rect.collidepoint(pos):
-                self.minimax_depth = min(24, self.minimax_depth + 1)
+                self.minimax_depth = min(12, self.minimax_depth + 1)
                 return None
 
             for btn in self.main_buttons:
