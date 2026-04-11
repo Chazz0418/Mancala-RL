@@ -34,19 +34,25 @@ There are dozens of graphs, but you only need to watch a few to know if your age
 *   **What it is**: The average reward the agent gets per episode (game).
 *   **What to look for**: This line should go **UP**.
 *   **Context**: 
-    - In Phase 1 (vs Random), this will climb steadily as the AI learns to beat a bad opponent.
-    - In Phase 2 (Self-Play), this line will look like a staircase. Every time a new generation starts, the AI faces a harder version of itself, so the score drops. As it figures out a new counter-strategy, the score climbs back up.
-*   **Convergence**: When this line flattens out and stops rising for a very long time, the agent has learned as much as it can.
+    - **Phase 1 (vs Random)**: A rapid climb here means the AI is quickly learning the basic rules and scoring. 
+    - **Phase 2 (Self-Play)**: Expect a "sawtooth" pattern. Every time a new generation starts, the reward will drop (as the AI faces a harder version of itself) and then climb back up as it solves the new challenge.
+    - **Phase 4 (Refinement)**: In this phase, `incremental_reward` is OFF. A value of **1.0** means 100% win rate, **0.0** means 50/50, and **-1.0** means 100% loss.
+*   **Convergence**: When this line flattens into a high plateau, the agent has mastered its current opponent.
 
 ### 2. `rollout/ep_len_mean` (The "Game Length")
-*   **What it is**: The average number of turns a game lasts.
-*   **What to look for**: In Mancala, you generally want this to go **DOWN** or stabilize.
-*   **Context**: If this number is very high, the AI is likely playing aimlessly and dragging the game out. A dropping line means the AI is finding efficient, ruthless ways to end the game quickly.
+*   **What it is**: The average number of turns per game.
+*   **What to look for**: A steady **DOWNWARD** slope or a low plateau.
+*   **Context**: 
+    - **Efficiency**: A high-level Mancala AI wins by making powerful combos and captures that end the game faster. 
+    - **Stalling**: If this number is increasing while your reward is flat, your AI might be "running away" from the opponent without actually trying to win, dragging the game out.
+    - **Sudden Drops**: A sharp drop in game length usually means the AI has discovered a "kill shot" strategy or a way to trigger the end-game sweep early.
 
 ### 3. `train/loss` (The "Headache" Meter)
-*   **What it is**: How much the AI is struggling to predict the outcome of its actions.
-*   **What to look for**: It should start high and eventually drop and **STABILIZE**.
-*   **Context**: It will never reach zero. If it suddenly spikes massively late in training, it might indicate "catastrophic forgetting" (the AI suddenly got confused).
+*   **What it is**: A combined measure of how well the AI predicts rewards and how much it updates its policy.
+*   **What to look for**: It should start high, then drop and **STABILIZE**.
+*   - **Initial Spike**: Large spikes early on are normal as the "brain" is essentially in shock from new data.
+    - **Plateau**: As long as the line is stable (not exploding upward), the training is healthy.
+    - **Spike at Phase Change**: You will see a small spike whenever you change opponents (e.g., switching to Minimax). This is just the AI adjusting to a new style of play.
 
 ### 4. `train/entropy_loss` (The "Decisiveness" Meter)
 *   **What it is**: A measure of how random the AI's choices are.
@@ -58,9 +64,12 @@ There are dozens of graphs, but you only need to watch a few to know if your age
     - **Self-Play Pattern**: You will see this "reset" (drop down) at the start of every new generation as the AI explores how to beat its new opponent, then climb back up as it masters the new strategy.
 
 ### 5. `train/explained_variance` (The "Understanding" Meter)
-*   **What it is**: How well the AI understands the "value" of the current board state.
-*   **What to look for**: A number between 0 and 1. Closer to **1.0 is better**.
-*   **Context**: If this number is negative or zero, the AI has no idea if it's winning or losing. Once it consistently stays above 0.5, the AI has developed a good "intuition" for the game.
+*   **What it is**: Measures how accurately the AI can predict the "Value" (winning potential) of any given board state.
+*   **What to look for**: A line moving from near 0.0 toward **1.0**.
+*   **Context**: 
+    - **Values < 0**: The AI's "intuition" is worse than random guessing. This is common at the very start of training.
+    - **Values > 0.5**: The AI has a strong grasp of the board state. It can accurately tell you "I am currently winning" or "I am in trouble" before the game even ends.
+    - **The Goal**: High-level agents usually stay between **0.8 and 0.9**.
 
 ---
 
