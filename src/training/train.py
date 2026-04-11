@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import random
 
 # Add mancala-ai submodule to path
 submodule_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "mancala_ai"))
@@ -14,84 +15,100 @@ from src.env_wrapper import MancalaEnv
 from src.training.callbacks import get_callbacks
 from mancala_ai.agents.random_agent import RandomAgent
 from mancala_ai.agents.minimax_agent import MinimaxAgent
-
 from src.agents.rl_agent import RLAgent
 
-def train(total_timesteps=500000, resume_from=None):
-    # Create directories
+def make_env_factory(opponent_type="self", model_pool=None, incremental_reward=False, random_start_moves=3):
+    """
+    Creates an environment with specific opponent types for the Diversity Curriculum.
+    """
+    def _init():
+        if opponent_type == "minimax":
+            # The Enforcer: Fast Greedy Defense
+            opp = MinimaxAgent("The_Enforcer", depth=1, time_limit=0.05)
+        elif opponent_type == "pool" and model_pool:
+            # The Council: Random selection from past generations
+            chosen_model = random.choice(model_pool)
+            opp = RLAgent(f"Council_{os.path.basename(chosen_model)}", chosen_model)
+        else:
+            # Self-Play: The latest best model
+            if model_pool and len(model_pool) > 0:
+                opp = RLAgent("Latest_Self", model_pool[-1])
+            else:
+                opp = RandomAgent("Random_Fallback")
+        
+        return MancalaEnv(opponent_agent=opp, incremental_reward=incremental_reward, random_start_moves=random_start_moves)
+    return _init
+
+def train_grandmaster_2(total_steps=10000000, start_model="./models/backups/alpha.zip", n_envs=8):
     os.makedirs("./models", exist_ok=True)
     os.makedirs("./logs", exist_ok=True)
 
-    # Setup environment
-    def make_env(opponent_type="random", model_path=None):
-        if opponent_type == "random":
-            opp = RandomAgent("Random")
-        elif opponent_type == "rl":
-            opp = RLAgent("RL_Opponent", model_path)
-        elif opponent_type == "minimax":
-            opp = MinimaxAgent("Minimax")
-            opp.set_setting("depth", 2)
-        else:
-            opp = RandomAgent("Random")
-        return MancalaEnv(opponent_agent=opp)
+    # 1. Initial Setup
+    print(f"🚀 Starting Grandmaster 2.0 Regime from {start_model}")
+    model_pool = [start_model]
+    
+    # Create the initial diverse environment set
+    # 4 Self-Play, 2 Council (from pool), 2 Minimax
+    env_fns = []
+    for _ in range(4): env_fns.append(make_env_factory("self", model_pool))
+    for _ in range(2): env_fns.append(make_env_factory("pool", model_pool))
+    for _ in range(2): env_fns.append(make_env_factory("minimax"))
+    
+    env = SubprocVecEnv(env_fns)
 
-    # Phase 1: 0-200k (Random)
-    if total_timesteps > 0:
-        print("Starting Phase 1: Training against RandomAgent...")
-        env = make_vec_env(lambda: make_env("random"), n_envs=4, vec_env_cls=SubprocVecEnv)
-        
-        if resume_from and os.path.exists(resume_from):
-            print(f"Resuming from {resume_from}")
-            model = MaskablePPO.load(resume_from, env=env)
-        else:
-            model = MaskablePPO(
-                "MlpPolicy",
-                env,
-                verbose=1,
-                learning_rate=3e-4,
-                n_steps=2048,
-                batch_size=64,
-                n_epochs=10,
-                gamma=0.99,
-                policy_kwargs={"net_arch": [128, 128]},
-                tensorboard_log="./logs/"
-            )
+    # 2. Load and Upgrade the Model
+    # We load Alpha and apply the new high-precision hyperparameters
+    model = MaskablePPO.load(start_model, env=env)
+    model.learning_rate = 5e-5
+    model.n_steps = 4096
+    model.batch_size = 256
+    model.ent_coef = 0.01
+    model.gamma = 0.995
+    model.tensorboard_log = "./logs/"
+    
+    print(f"🧠 Brain Upgraded: LR={model.learning_rate}, Batch={model.batch_size}, Ent={model.ent_coef}")
 
-        eval_env = make_env("random")
-        callbacks = get_callbacks(eval_env)
+    # 3. The Generational Diversity Loop
+    steps_per_gen = 1000000
+    num_gens = total_steps // steps_per_gen
+    
+    for gen in range(num_gens):
+        gen_num = gen + 1
+        print(f"\n--- ⚔️ STARTING OMEGA GENERATION {gen_num}/{num_gens} ---")
         
-        steps = min(200000, total_timesteps)
-        model.learn(total_timesteps=steps, callback=callbacks, reset_num_timesteps=False, tb_log_name="phase_1")
-        model.save("./models/phase_1_final")
-
-    # Phase 2: 200k-400k (Self-play)
-    if total_timesteps > 200000:
-        print("Starting Phase 2: Self-play against Phase 1 model...")
-        env = make_vec_env(lambda: make_env("rl", "./models/phase_1_final.zip"), n_envs=4, vec_env_cls=SubprocVecEnv)
-        model.set_env(env)
-        eval_env = make_env("random") # Still eval against random for consistency
-        callbacks = get_callbacks(eval_env)
+        # Refresh environment with the latest model pool
+        env_fns = []
+        for _ in range(4): env_fns.append(make_env_factory("self", model_pool))
+        for _ in range(2): env_fns.append(make_env_factory("pool", model_pool))
+        for _ in range(2): env_fns.append(make_env_factory("minimax"))
         
-        steps = min(200000, total_timesteps - 200000)
-        model.learn(total_timesteps=steps, callback=callbacks, reset_num_timesteps=False, tb_log_name="phase_2")
-        model.save("./models/phase_2_final")
-
-    # Phase 3: 400k+ (Minimax)
-    if total_timesteps > 400000:
-        print("Starting Phase 3: Training against MinimaxAgent...")
-        env = make_vec_env(lambda: make_env("minimax"), n_envs=4, vec_env_cls=SubprocVecEnv)
-        model.set_env(env)
-        eval_env = make_env("random")
-        callbacks = get_callbacks(eval_env)
+        new_env = SubprocVecEnv(env_fns)
+        model.set_env(new_env)
         
-        steps = total_timesteps - 400000
-        model.learn(total_timesteps=steps, callback=callbacks, reset_num_timesteps=False, tb_log_name="phase_3")
+        # Train for 1M steps
+        callbacks = get_callbacks(save_path="./models/")
+        model.learn(
+            total_timesteps=steps_per_gen, 
+            callback=callbacks, 
+            reset_num_timesteps=False, 
+            tb_log_name=f"omega_gen_{gen_num}"
+        )
+        
+        # Save and Update Pool
+        save_path = f"./models/omega_gen_{gen_num}.zip"
+        model.save(save_path)
         model.save("./models/final_model")
+        model_pool.append(save_path)
+        
+        print(f"✅ Generation {gen_num} complete. Added to Council pool.")
+
+    print("\n🏆 Grandmaster 2.0 Training Complete! final_model.zip is your new champion.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--steps", type=int, default=100000)
-    parser.add_argument("--resume", type=str, default=None)
+    parser.add_argument("--steps", type=int, default=10000000)
+    parser.add_argument("--resume", type=str, default="./models/backups/alpha.zip")
+    parser.add_argument("--envs", type=int, default=8)
     args = parser.parse_args()
     
-    train(total_timesteps=args.steps, resume_from=args.resume)
+    train_grandmaster_2(total_steps=args.steps, start_model=args.resume, n_envs=args.envs)

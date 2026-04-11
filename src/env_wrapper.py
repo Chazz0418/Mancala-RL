@@ -29,7 +29,7 @@ def normalize_observation(board, player_idx):
 class MancalaEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, opponent_agent=None, incremental_reward=False):
+    def __init__(self, opponent_agent=None, incremental_reward=False, random_start_moves=0):
         super(MancalaEnv, self). __init__()
         self.kalah = KalahEnvironment()
         
@@ -41,6 +41,7 @@ class MancalaEnv(gym.Env):
         
         self.opponent = opponent_agent or RandomAgent("Opponent")
         self.incremental_reward = incremental_reward
+        self.random_start_moves = random_start_moves
         self.agent_player_idx = 0
 
     def _get_obs(self):
@@ -61,11 +62,22 @@ class MancalaEnv(gym.Env):
         super().reset(seed=seed)
         self.kalah.reset()
         
+        # Execute random starting moves to prevent deterministic loops
+        if self.random_start_moves > 0:
+            for _ in range(self.random_start_moves):
+                if self.kalah.done:
+                    break
+                valid_actions = self.kalah.get_valid_actions()
+                if not valid_actions:
+                    break
+                action = self.np_random.choice(valid_actions)
+                self.kalah.step(action)
+        
         # Randomly assign agent to Player 0 or 1
         self.agent_player_idx = self.np_random.integers(0, 2)
         
         # If it's opponent's turn, let them move
-        if self.kalah.current_player != self.agent_player_idx:
+        if not self.kalah.done and self.kalah.current_player != self.agent_player_idx:
             self._opponent_move()
             
         return self._get_obs(), {}

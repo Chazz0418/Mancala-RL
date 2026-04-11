@@ -9,9 +9,42 @@ if submodule_path not in sys.path:
 from mancala_ai.environments.kalah_environment import KalahEnvironment
 from mancala_ai.agents.random_agent import RandomAgent
 
-def run_tournament(agent_a, agent_b, n_games: int) -> dict:
+import sys
+import os
+from concurrent.futures import ProcessPoolExecutor
+from mancala_ai.environments.kalah_environment import KalahEnvironment
+from mancala_ai.agents.random_agent import RandomAgent
+
+def _play_single_game(args):
+    """Worker function to play one game in a separate process."""
+    agent_0, agent_1, random_start_moves = args
+    env = KalahEnvironment()
+    env.reset()
+    
+    # Execute random starting moves
+    if random_start_moves > 0:
+        import random as py_random
+        for _ in range(random_start_moves):
+            if env.done:
+                break
+            valid_actions = env.get_valid_actions()
+            if not valid_actions:
+                break
+            action = py_random.choice(valid_actions)
+            env.step(action)
+    
+    while not env.done:
+        current_agent = agent_0 if env.current_player == 0 else agent_1
+        action = current_agent.get_action(env)
+        if action == -1:
+            break
+        env.step(action)
+        
+    return env.get_winner()
+
+def run_tournament(agent_a, agent_b, n_games: int, n_envs: int = 8, random_start_moves: int = 0) -> dict:
     """
-    Run N games between agent_a and agent_b.
+    Run N games between agent_a and agent_b in parallel using n_envs processes.
     agent_a is assigned to Player 0 in even games, and Player 1 in odd games.
     """
     stats = {
@@ -20,42 +53,34 @@ def run_tournament(agent_a, agent_b, n_games: int) -> dict:
         "draws": 0
     }
     
-    env = KalahEnvironment()
+    print(f"Starting tournament: {agent_a.name} vs {agent_b.name} ({n_games} games, {n_envs} cores, {random_start_moves} random starts)")
     
+    # Prepare the match-ups (alternating who goes first)
+    match_ups = []
     for i in range(n_games):
-        env.reset()
-        
-        # Alternate who goes first (Player 0)
         if i % 2 == 0:
-            player_0 = agent_a
-            player_1 = agent_b
+            match_ups.append((agent_a, agent_b, random_start_moves)) # A is P0
         else:
-            player_0 = agent_b
-            player_1 = agent_a
-            
-        while not env.done:
-            current_agent = player_0 if env.current_player == 0 else player_1
-            action = current_agent.get_action(env)
-            if action == -1:
-                break
-            env.step(action)
-            
-        winner = env.get_winner()
-        if winner == 0:
+            match_ups.append((agent_b, agent_a, random_start_moves)) # B is P0
+
+    # Run games in parallel
+    with ProcessPoolExecutor(max_workers=n_envs) as executor:
+        results = list(executor.map(_play_single_game, match_ups))
+
+    # Process results
+    for i, winner in enumerate(results):
+        if winner == 0: # Player 0 won
             if i % 2 == 0:
                 stats["agent_a_wins"] += 1
             else:
                 stats["agent_b_wins"] += 1
-        elif winner == 1:
+        elif winner == 1: # Player 1 won
             if i % 2 == 0:
                 stats["agent_b_wins"] += 1
             else:
                 stats["agent_a_wins"] += 1
         else:
             stats["draws"] += 1
-            
-        if (i + 1) % 10 == 0:
-            print(f"Game {i + 1}/{n_games}: Agent A: {stats['agent_a_wins']}, Agent B: {stats['agent_b_wins']}, Draws: {stats['draws']}")
             
     # Final summary
     print("\nTournament Final Summary:")
@@ -71,7 +96,7 @@ def run_tournament(agent_a, agent_b, n_games: int) -> dict:
     else:
         stats["winner"] = "Tie"
         
-    print(f"Winner: {stats['winner']}")
+    print(f"Overall Winner: {stats['winner']}")
     return stats
 
 if __name__ == "__main__":
