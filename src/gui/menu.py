@@ -10,6 +10,8 @@ class Menu:
         self.selected_model = None
         self.target_mode = None # "play" or "watch"
         self.minimax_depth = 3
+        self.scroll_offset = 0
+        self.models_per_page = 5
 
         self.main_buttons = [
             {"label": "Human vs AI", "rect": pygame.Rect(250, 80, 300, 60), "mode": "play"},
@@ -20,6 +22,10 @@ class Menu:
         # Minimax Depth adjustment buttons
         self.depth_minus_rect = pygame.Rect(560, 175, 30, 30)
         self.depth_plus_rect = pygame.Rect(640, 175, 30, 30)
+        
+        # Scroll buttons
+        self.scroll_up_rect = pygame.Rect(670, 100, 40, 40)
+        self.scroll_down_rect = pygame.Rect(670, 300, 40, 40)
 
     def draw(self):
         self.surface.fill((30, 30, 30))
@@ -65,12 +71,27 @@ class Menu:
         self.surface.blit(title, (230, 30))
         
         models = self._get_available_models()
-        for i, model in enumerate(models[:5]): # Show top 5 for now
+        visible_models = models[self.scroll_offset : self.scroll_offset + self.models_per_page]
+        
+        for i, model in enumerate(visible_models):
             rect = pygame.Rect(150, 100 + i*50, 500, 40)
-            pygame.draw.rect(self.surface, (50, 50, 50), rect, border_radius=5)
+            color = (80, 80, 80) if os.path.join("models", model) == self.selected_model else (50, 50, 50)
+            pygame.draw.rect(self.surface, color, rect, border_radius=5)
             text = self.small_font.render(model, True, (255, 255, 255))
             self.surface.blit(text, (170, 110 + i*50))
             
+        # Draw scroll buttons if needed
+        if len(models) > self.models_per_page:
+            if self.scroll_offset > 0:
+                pygame.draw.rect(self.surface, (70, 70, 70), self.scroll_up_rect, border_radius=5)
+                up_text = self.small_font.render("^", True, (255, 255, 255))
+                self.surface.blit(up_text, (self.scroll_up_rect.centerx - 5, self.scroll_up_rect.centery - 10))
+            
+            if self.scroll_offset + self.models_per_page < len(models):
+                pygame.draw.rect(self.surface, (70, 70, 70), self.scroll_down_rect, border_radius=5)
+                down_text = self.small_font.render("v", True, (255, 255, 255))
+                self.surface.blit(down_text, (self.scroll_down_rect.centerx - 5, self.scroll_down_rect.centery - 10))
+
         back_btn = pygame.Rect(300, 350, 200, 40)
         pygame.draw.rect(self.surface, (100, 50, 50), back_btn, border_radius=5)
         back_text = self.small_font.render("Back", True, (255, 255, 255))
@@ -83,11 +104,13 @@ class Menu:
         models = []
         for root, dirs, files in os.walk("./models"):
             for file in files:
-                if file.endswith(".zip"):
+                if file.endswith(".zip") and file != "temp_migrate.zip":
                     full_path = os.path.join(root, file)
                     rel_path = os.path.relpath(full_path, "./models")
                     models.append(rel_path)
-        return sorted(models, reverse=True)
+        
+        # Sort so backups are clear but newest models are first
+        return sorted(models, key=lambda x: (not x.startswith("backups"), x), reverse=True)
 
     def handle_click(self, pos):
         if self.state == "main":
@@ -103,18 +126,31 @@ class Menu:
                 if btn["rect"].collidepoint(pos):
                     if btn["mode"] == "select_model":
                         self.state = "model_select"
+                        self.scroll_offset = 0
                         return None
                     return btn["mode"]
         
         elif self.state == "model_select":
             models = self._get_available_models()
-            for i, model in enumerate(models[:5]):
+            visible_models = models[self.scroll_offset : self.scroll_offset + self.models_per_page]
+            
+            # Check model list clicks
+            for i, model in enumerate(visible_models):
                 rect = pygame.Rect(150, 100 + i*50, 500, 40)
                 if rect.collidepoint(pos):
                     self.selected_model = os.path.join("models", model)
                     self.state = "main"
                     return None
             
+            # Check scroll buttons
+            if self.scroll_up_rect.collidepoint(pos):
+                self.scroll_offset = max(0, self.scroll_offset - 1)
+                return None
+            if self.scroll_down_rect.collidepoint(pos):
+                if self.scroll_offset + self.models_per_page < len(models):
+                    self.scroll_offset += 1
+                return None
+
             back_btn = pygame.Rect(300, 350, 200, 40)
             if back_btn.collidepoint(pos):
                 self.state = "main"
