@@ -156,5 +156,6 @@ models/
 logs/
 archive/
 GEMINI.md
+tournament_results.txt
 test_env_manual.py
 test_mancala_rules.py
